@@ -10,23 +10,50 @@ import XCTest
 @frozen
 enum RPGException: LocalizedError {
     case cannotHurtSelf
+    case canOnlyHealSelf
     
     var errorDescription: String? {
         switch self {
         case .cannotHurtSelf:
             return "A character cannot hurt himself"
+        case .canOnlyHealSelf:
+            return "A character can only heal himself"
         }
     }
 }
 
-struct RPGCharacter {
+protocol Fighter {
+    var attack: Attack { get }
+    var heal: Heal { get }
+}
+
+struct Attack {
+    func execute(attacker: RPGCharacter, opponent: RPGCharacter, damage: Double) -> RPGCharacter {
+        return RPGCharacter()
+    }
+}
+
+struct Heal {
+    func execute(healer: RPGCharacter, target: RPGCharacter, amount: Double) throws -> RPGCharacter{
+        guard healer == target else { throw RPGException.canOnlyHealSelf }
+        return target.receiveHealing(amount)
+    }
+}
+
+struct RPGCharacter: Fighter {
     private struct Constants {
         static let initialHealth: Double = 1000
         static let maximumHealth: Double = 1000
     }
     private let id: String
-    private(set) var health: Double
+    private(set) var health: Double {
+        didSet {
+            health = min(health, Constants.maximumHealth)
+        }
+    }
     private(set) var level: Int
+    private(set) var attack: Attack
+    private(set) var heal: Heal
     
     var isAlive: Bool {
         health > 0
@@ -36,6 +63,8 @@ struct RPGCharacter {
         self.health = health
         self.level = level
         self.id = UUID().uuidString
+        self.attack = Attack()
+        self.heal = Heal()
     }
     
     mutating func receiveDamage(of damageAmount: Double, attackerLevel: Int) {
@@ -55,8 +84,14 @@ struct RPGCharacter {
         return damagedOpponent
     }
     
-    mutating func heal(_ amount: Double) {
-        health = min(health + amount, Constants.maximumHealth)
+    func receiveHealing(_ amount: Double) -> RPGCharacter {
+        var healedSelf = self
+        healedSelf.health += amount
+        return healedSelf
+    }
+    
+    func heal(_ amount: Double) throws -> RPGCharacter {
+        return try heal.execute(healer: self, target: self, amount: amount)
     }
 }
 
@@ -67,25 +102,25 @@ extension RPGCharacter: Equatable {
 }
 
 class CharacterTests: XCTestCase {
-    private var sut: RPGCharacter!
+    private var aCharacter: RPGCharacter!
     
     override func setUp() {
-        sut = RPGCharacter()
+        aCharacter = RPGCharacter()
     }
 }
 
 // MARK: - Iteration 1
 extension CharacterTests {
     func testCharacter_onInit_healthIs1000() {
-        XCTAssertEqual(sut.health, 1000)
+        XCTAssertEqual(aCharacter.health, 1000)
     }
     
     func testCharacter_onInit_levelIs1() {
-        XCTAssertEqual(sut.level, 1)
+        XCTAssertEqual(aCharacter.level, 1)
     }
     
     func testCharacter_onInit_isAlive() {
-        XCTAssertTrue(sut.isAlive)
+        XCTAssertTrue(aCharacter.isAlive)
     }
     
     func testCharacter_receiveDamage_substractHealthEqualToDamageReceived() throws {
@@ -115,13 +150,13 @@ extension CharacterTests {
     
     func testCharacter_receivesHealing_addsHealingAmountToActualHealth() throws {
         givenCharacter(initialHealth: 500)
-        whenCharacterIsHealed(by: 400)
+        try whenCharacterIsHealed(by: 400)
         try thenCharacterHealthIs(900)
     }
     
     func testCharacter_receivesHealing_healthCannotGoBeyond1000() throws {
         givenCharacter(initialHealth: 900)
-        whenCharacterIsHealed(by: 200)
+        try whenCharacterIsHealed(by: 200)
         try thenCharacterHealthIs(1000)
     }
 }
@@ -129,13 +164,13 @@ extension CharacterTests {
 // MARK: - Iteration 2
 extension CharacterTests {
     func testCharacter_onAttackHimself_throwsException() {
-        XCTAssertThrowsError(try sut.attack(sut, damage: .random(in: 0...1000)))
+        XCTAssertThrowsError(try aCharacter.attack(aCharacter, damage: .random(in: 0...1000)))
     }
     
-    func testCharacter_canOnlyHealsHimself() {
-        var healer = RPGCharacter(health: 100)
-        healer.heal(600)
-        XCTAssertEqual(healer.health, 700)
+    func testCharacter_canOnlyHealsHimself() throws {
+        let damagedCharacer = RPGCharacter(health: 300)
+        let healedCharacter = try damagedCharacer.heal(600)
+        XCTAssertEqual(healedCharacter.health, 900)
     }
     
     func testCharacter_onAttackCharacter5levelsAbove_opponentReceivesHalfDamage() throws {
@@ -155,22 +190,22 @@ extension CharacterTests {
 
 private extension CharacterTests {
     func givenCharacter(initialHealth: Double) {
-        sut = RPGCharacter(health: initialHealth)
+        aCharacter = RPGCharacter(health: initialHealth)
     }
     
     func whenCharacterReceivesDamage(amount: Double) {
-        sut.receiveDamage(of: amount, attackerLevel: 1)
+        aCharacter.receiveDamage(of: amount, attackerLevel: 1)
     }
     
-    func whenCharacterIsHealed(by amount: Double) {
-        sut.heal(amount)
+    func whenCharacterIsHealed(by amount: Double) throws {
+        aCharacter = try aCharacter.heal(amount)
     }
     
     func thenCharacterHealthIs(_ value: Double) throws {
-        XCTAssertEqual(sut.health, value)
+        XCTAssertEqual(aCharacter.health, value)
     }
     
     func thenCharacterIsDead() {
-        XCTAssertFalse(sut.isAlive)
+        XCTAssertFalse(aCharacter.isAlive)
     }
 }
