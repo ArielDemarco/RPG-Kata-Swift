@@ -28,8 +28,24 @@ protocol Fighter {
 }
 
 struct Attack {
-    func execute(attacker: RPGCharacter, opponent: RPGCharacter, damage: Double) -> RPGCharacter {
-        return RPGCharacter()
+    func execute(attacker: RPGCharacter, opponent: RPGCharacter, damage: Double) throws -> RPGCharacter {
+        guard attacker != opponent else { throw RPGException.cannotHurtSelf }
+        let totalDamage = calculateDamage(fromAmount: damage,
+                                          attackerLevel: attacker.level,
+                                          opponentLevel: opponent.level)
+        return opponent.receiveDamage(of: totalDamage)
+    }
+    
+    private func calculateDamage(fromAmount baseAmount: Double,
+                                 attackerLevel: Int,
+                                 opponentLevel: Int) -> Double {
+        var totalDamage = baseAmount
+        if opponentLevel >= attackerLevel + 5 {
+            totalDamage *= 0.5
+        } else if opponentLevel + 5 <= attackerLevel {
+            totalDamage *= 1.5
+        }
+        return totalDamage
     }
 }
 
@@ -48,7 +64,7 @@ struct RPGCharacter: Fighter {
     private let id: String
     private(set) var health: Double {
         didSet {
-            health = min(health, Constants.maximumHealth)
+            health = max(0, min(health, Constants.maximumHealth))
         }
     }
     private(set) var level: Int
@@ -59,29 +75,23 @@ struct RPGCharacter: Fighter {
         health > 0
     }
     
-    init(health: Double = Constants.initialHealth, level: Int = 1) {
+    init(health: Double = Constants.initialHealth,
+         level: Int = 1) {
+        self.id = UUID().uuidString
         self.health = health
         self.level = level
-        self.id = UUID().uuidString
         self.attack = Attack()
         self.heal = Heal()
     }
     
-    mutating func receiveDamage(of damageAmount: Double, attackerLevel: Int) {
-        var totalDamage = damageAmount
-        if level >= attackerLevel + 5 {
-            totalDamage *= 0.5
-        } else if level + 5 <= attackerLevel {
-            totalDamage *= 1.5
-        }
-        health = max(health - totalDamage, 0)
+    func receiveDamage(of damageAmount: Double) -> RPGCharacter {
+        var damagedSelf = self
+        damagedSelf.health -= damageAmount
+        return damagedSelf
     }
     
     func attack(_ opponent: RPGCharacter, damage: Double) throws -> RPGCharacter {
-        guard self != opponent else { throw RPGException.cannotHurtSelf }
-        var damagedOpponent = opponent
-        damagedOpponent.receiveDamage(of: damage, attackerLevel: level)
-        return damagedOpponent
+        try attack.execute(attacker: self, opponent: opponent, damage: damage)
     }
     
     func receiveHealing(_ amount: Double) -> RPGCharacter {
@@ -194,7 +204,7 @@ private extension CharacterTests {
     }
     
     func whenCharacterReceivesDamage(amount: Double) {
-        aCharacter.receiveDamage(of: amount, attackerLevel: 1)
+        aCharacter = aCharacter.receiveDamage(of: amount)
     }
     
     func whenCharacterIsHealed(by amount: Double) throws {
