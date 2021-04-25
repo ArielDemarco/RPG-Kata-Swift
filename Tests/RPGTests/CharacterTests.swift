@@ -11,6 +11,7 @@ import XCTest
 enum RPGException: LocalizedError {
     case cannotHurtSelf
     case canOnlyHealSelf
+    case enemyNotInRange
     
     var errorDescription: String? {
         switch self {
@@ -18,18 +19,20 @@ enum RPGException: LocalizedError {
             return "A character cannot hurt himself"
         case .canOnlyHealSelf:
             return "A character can only heal himself"
+        case .enemyNotInRange:
+            return "Enemy is not in range"
         }
     }
 }
 
-protocol Fighter {
-    var attack: Attack { get }
-    var heal: Heal { get }
-}
-
 struct Attack {
-    func execute(attacker: RPGCharacter, opponent: RPGCharacter, damage: Double) throws -> RPGCharacter {
+    func execute(attacker: RPGCharacter,
+                 opponent: RPGCharacter,
+                 damage: Double,
+                 battlefield: Battlefield) throws -> RPGCharacter {
         guard attacker != opponent else { throw RPGException.cannotHurtSelf }
+        guard battlefield.isInRange(attacker: attacker,
+                                    opponent: opponent) else { throw RPGException.enemyNotInRange }
         let totalDamage = calculateDamage(fromAmount: damage,
                                           attackerLevel: attacker.level,
                                           opponentLevel: opponent.level)
@@ -56,48 +59,67 @@ struct Heal {
     }
 }
 
-struct RPGCharacter: Fighter {
-    private struct Constants {
+class MeleeCharacter: RPGCharacter {
+    override init(health: Double = Constants.initialHealth,
+                  level: Int = Constants.initialLevel) {
+        super.init(health: health, level: level)
+        self.maxRange = 2
+    }
+}
+
+class RangedCharacter: RPGCharacter {
+    override init(health: Double = Constants.initialHealth,
+                  level: Int = Constants.initialLevel) {
+        super.init(health: health, level: level)
+        self.maxRange = 20
+    }
+}
+
+class RPGCharacter: NSObject {
+    struct Constants {
         static let initialHealth: Double = 1000
         static let maximumHealth: Double = 1000
+        static let initialLevel: Int = 1
     }
-    private let id: String
+    private let attack: Attack
+    private let heal: Heal
+    private(set) var level: Int
     private(set) var health: Double {
         didSet {
             health = max(0, min(health, Constants.maximumHealth))
         }
     }
-    private(set) var level: Int
-    private(set) var attack: Attack
-    private(set) var heal: Heal
-    
+    open var maxRange: Int
     var isAlive: Bool {
         health > 0
     }
     
     init(health: Double = Constants.initialHealth,
-         level: Int = 1) {
-        self.id = UUID().uuidString
+         level: Int = Constants.initialLevel) {
         self.health = health
         self.level = level
         self.attack = Attack()
         self.heal = Heal()
+        self.maxRange = 0
     }
     
     func receiveDamage(of damageAmount: Double) -> RPGCharacter {
-        var damagedSelf = self
-        damagedSelf.health -= damageAmount
-        return damagedSelf
+        health -= damageAmount
+        return self
     }
     
-    func attack(_ opponent: RPGCharacter, damage: Double) throws -> RPGCharacter {
-        try attack.execute(attacker: self, opponent: opponent, damage: damage)
+    func attack(_ opponent: RPGCharacter,
+                damage: Double,
+                battlefield: Battlefield) throws -> RPGCharacter {
+        try attack.execute(attacker: self,
+                           opponent: opponent,
+                           damage: damage,
+                           battlefield: battlefield)
     }
     
     func receiveHealing(_ amount: Double) -> RPGCharacter {
-        var healedSelf = self
-        healedSelf.health += amount
-        return healedSelf
+        health += amount
+        return self
     }
     
     func heal(_ amount: Double) throws -> RPGCharacter {
@@ -105,9 +127,21 @@ struct RPGCharacter: Fighter {
     }
 }
 
-extension RPGCharacter: Equatable {
-    static func == (lhs: RPGCharacter, rhs: RPGCharacter) -> Bool {
-        lhs.id == rhs.id
+class Battlefield {
+    private var charactersPosition: [RPGCharacter: Int]
+    
+    init(charactersPosition: [RPGCharacter: Int] = [:]) {
+        self.charactersPosition = charactersPosition
+    }
+    
+    func add(_ character: RPGCharacter, atPosition position: Int) {
+        charactersPosition[character] = position
+    }
+    
+    func isInRange(attacker: RPGCharacter, opponent: RPGCharacter) -> Bool {
+        guard let attackerPosition = charactersPosition[attacker],
+              let opponentPosition = charactersPosition[opponent] else { return false }
+        return abs(attackerPosition - opponentPosition) <= attacker.maxRange
     }
 }
 
@@ -154,7 +188,12 @@ extension CharacterTests {
     func testCharacter_dealsDamage() throws {
         let attacker = RPGCharacter()
         let opponent = RPGCharacter(health: 1000)
-        let damagedOponent = try attacker.attack(opponent, damage: 100)
+        let battleField = Battlefield()
+        battleField.add(attacker, atPosition: 0)
+        battleField.add(opponent, atPosition: 0)
+        let damagedOponent = try attacker.attack(opponent,
+                                                 damage: 100,
+                                                 battlefield: battleField)
         XCTAssertEqual(damagedOponent.health, 900)
     }
     
@@ -174,7 +213,7 @@ extension CharacterTests {
 // MARK: - Iteration 2
 extension CharacterTests {
     func testCharacter_onAttackHimself_throwsException() {
-        XCTAssertThrowsError(try aCharacter.attack(aCharacter, damage: .random(in: 0...1000)))
+        XCTAssertThrowsError(try aCharacter.attack(aCharacter, damage: .random(in: 0...1000), battlefield: Battlefield()))
     }
     
     func testCharacter_canOnlyHealsHimself() throws {
@@ -186,15 +225,47 @@ extension CharacterTests {
     func testCharacter_onAttackCharacter5levelsAbove_opponentReceivesHalfDamage() throws {
         let attacker = RPGCharacter(level: 2)
         let opponent = RPGCharacter(health: 1000, level: 7)
-        let attackedOpponent = try attacker.attack(opponent, damage: 1000)
+        let battleField = Battlefield()
+        battleField.add(attacker, atPosition: 0)
+        battleField.add(opponent, atPosition: 0)
+        let attackedOpponent = try attacker.attack(opponent, damage: 1000, battlefield: battleField)
         XCTAssertEqual(attackedOpponent.health, 500)
     }
     
     func testCharacter_onAttackCharacter5levelsBelow_opponentReceives50PercentMoreDamage() throws {
         let attacker = RPGCharacter(level: 7)
         let opponent = RPGCharacter(health: 1000, level: 2)
-        let attackedOpponent = try attacker.attack(opponent, damage: 200)
+        let battlefield = Battlefield()
+        battlefield.add(attacker, atPosition: 0)
+        battlefield.add(opponent, atPosition: 0)
+        let attackedOpponent = try attacker.attack(opponent, damage: 200, battlefield: battlefield)
         XCTAssertEqual(attackedOpponent.health, 700)
+    }
+}
+
+// MARK: - Iteration 3
+extension CharacterTests {
+    func testCharacter_onInit_hasMaxAttackRange() {
+        XCTAssertGreaterThanOrEqual(aCharacter.maxRange, 0)
+    }
+    
+    func testMeleeCharacter_onInit_maxRngeIs2() {
+        aCharacter = MeleeCharacter()
+        XCTAssertEqual(aCharacter.maxRange, 2)
+    }
+    
+    func testRangedCharacter_onInit_maxRngeIs20() {
+        aCharacter = RangedCharacter()
+        XCTAssertEqual(aCharacter.maxRange, 20)
+    }
+    
+    func testCharacterFarAwayFromOpponent_onAttack_Misses() throws {
+        let attacker = MeleeCharacter()
+        let opponent = MeleeCharacter(health: 1000)
+        let battlefield = Battlefield()
+        battlefield.add(attacker, atPosition: 2)
+        battlefield.add(opponent, atPosition: 5)
+        XCTAssertThrowsError(try attacker.attack(opponent, damage: 200, battlefield: battlefield))
     }
 }
 
