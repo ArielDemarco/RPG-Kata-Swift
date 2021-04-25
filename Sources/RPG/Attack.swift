@@ -13,6 +13,9 @@ struct Attack {
                  damage: Double,
                  battlefield: Battlefield) throws {
         guard attacker != opponent else { throw RPGException.cannotHurtSelf }
+        guard attacker.factions.first(where: { opponent.factions.contains($0) }) == nil else {
+            throw RPGException.cannotHurtAlly
+        }
         guard battlefield.isInRange(attacker: attacker,
                                     opponent: opponent) else { throw RPGException.enemyNotInRange }
         let totalDamage = calculateDamage(fromAmount: damage,

@@ -77,9 +77,9 @@ extension CharacterTests {
         XCTAssertThrowsError(try aCharacter.attack(aCharacter, damage: .random(in: 0...1000), battlefield: Battlefield()))
     }
     
-    func testCharacter_canOnlyHealsHimself() throws {
+    func testCharacter_canHealsHimself() throws {
         let damagedCharacter = RPGCharacter(health: 300)
-        try damagedCharacter.heal(600)
+        try damagedCharacter.heal(damagedCharacter, amount: 600)
         XCTAssertEqual(damagedCharacter.health, 900)
     }
     
@@ -130,6 +130,57 @@ extension CharacterTests {
     }
 }
 
+// MARK: - Iteration 4
+extension CharacterTests {
+    func testCharacter_onInit_doesntBelongToAnyFaction() {
+        XCTAssertTrue(aCharacter.factions.isEmpty)
+    }
+    
+    func testCharacter_joinFaction_addsFactionToCharactersFactions() {
+        let aFaction = randomFaction()
+        aCharacter.addFaction(aFaction)
+        XCTAssertTrue(aCharacter.factions.contains(aFaction))
+    }
+    
+    func testCharacterInFaction_leaveFaction_removesTheFactionFromCharactersFaction() {
+        let aFaction = randomFaction()
+        aCharacter.addFaction(aFaction)
+        XCTAssertTrue(aCharacter.factions.contains(aFaction))
+        aCharacter.leaveFaction(aFaction)
+        XCTAssertFalse(aCharacter.factions.contains(aFaction))
+    }
+    
+    func testCharacter_onAttackAlly_attackCantBeDone() {
+        let aFaction = randomFaction()
+        let attacker = RPGCharacter()
+        let opponent = RPGCharacter()
+        attacker.addFaction(aFaction)
+        opponent.addFaction(aFaction)
+        let battlefield = Battlefield()
+        battlefield.add(attacker, atPosition: 0)
+        battlefield.add(opponent, atPosition: 0)
+        XCTAssertThrowsError((try attacker.attack(opponent,
+                            damage: .random(in: 0...1000),
+                            battlefield: battlefield)))
+    }
+    
+    func testCharacter_canOnlyHealAllies() throws {
+        let aFaction = randomFaction()
+        let character = RPGCharacter()
+        let ally = RPGCharacter(health: 900)
+        let opponent = RPGCharacter()
+        character.addFaction(aFaction)
+        ally.addFaction(aFaction)
+        let battlefield = Battlefield()
+        battlefield.add(character, atPosition: 0)
+        battlefield.add(opponent, atPosition: 0)
+        battlefield.add(ally, atPosition: 0)
+        try character.heal(ally, amount: 100)
+        XCTAssertEqual(ally.health, 1000)
+        XCTAssertThrowsError(try character.heal(opponent, amount: 100))
+    }
+}
+
 private extension CharacterTests {
     func givenCharacter(initialHealth: Double) {
         aCharacter = RPGCharacter(health: initialHealth)
@@ -140,7 +191,7 @@ private extension CharacterTests {
     }
     
     func whenCharacterIsHealed(by amount: Double) throws {
-        try aCharacter.heal(amount)
+        try aCharacter.heal(aCharacter, amount: amount)
     }
     
     func thenCharacterHealthIs(_ value: Double) throws {
@@ -149,5 +200,11 @@ private extension CharacterTests {
     
     func thenCharacterIsDead() {
         XCTAssertFalse(aCharacter.isAlive)
+    }
+}
+
+extension CharacterTests {
+    func randomFaction() -> String {
+        UUID().uuidString
     }
 }

@@ -9,17 +9,20 @@ import Foundation
 
 @frozen enum RPGException: LocalizedError {
     case cannotHurtSelf
-    case canOnlyHealSelf
+    case canOnlyHealOrAllySelf
     case enemyNotInRange
+    case cannotHurtAlly
     
     var errorDescription: String? {
         switch self {
         case .cannotHurtSelf:
             return "A character cannot hurt himself"
-        case .canOnlyHealSelf:
-            return "A character can only heal himself"
+        case .canOnlyHealOrAllySelf:
+            return "A character can only heal himself or an ally"
         case .enemyNotInRange:
             return "Enemy is not in range"
+        case .cannotHurtAlly:
+            return "Cannot attack a character from the same Faction"
         }
     }
 }

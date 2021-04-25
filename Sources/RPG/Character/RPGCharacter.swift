@@ -7,6 +7,8 @@
 
 import Foundation
 
+typealias Faction = String
+
 class RPGCharacter: NSObject {
     struct Constants {
         static let initialHealth: Double = 1000
@@ -15,6 +17,7 @@ class RPGCharacter: NSObject {
     }
     private let attack: Attack
     private let heal: Heal
+    private(set) var factions: Set<Faction>
     private(set) var level: Int
     private(set) var health: Double {
         didSet {
@@ -33,6 +36,15 @@ class RPGCharacter: NSObject {
         self.attack = Attack()
         self.heal = Heal()
         self.maxRange = 0
+        self.factions = []
+    }
+    
+    func addFaction(_ faction: Faction) {
+        factions.insert(faction)
+    }
+    
+    func leaveFaction(_ faction: Faction) {
+        factions.remove(faction)
     }
     
     func receiveDamage(of damageAmount: Double) {
@@ -52,7 +64,11 @@ class RPGCharacter: NSObject {
         health += amount
     }
     
-    func heal(_ amount: Double) throws {
-        try heal.execute(healer: self, target: self, amount: amount)
+    func heal(_ character: RPGCharacter, amount: Double) throws {
+        try heal.execute(healer: self, target: character, amount: amount)
+    }
+    
+    func isAlly(of character: RPGCharacter) -> Bool {
+        return factions.first(where: { character.factions.contains($0) }) != nil 
     }
 }
