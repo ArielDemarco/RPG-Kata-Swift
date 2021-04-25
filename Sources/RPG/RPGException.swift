@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  RPGException.swift
 //  
 //
 //  Created by Ariel Demarco on 25/04/2021.
