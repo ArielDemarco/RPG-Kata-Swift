@@ -8,8 +8,8 @@
 import Foundation
 
 struct Heal {
-    func execute(healer: RPGCharacter, target: RPGCharacter, amount: Double) throws -> RPGCharacter{
+    func execute(healer: RPGCharacter, target: RPGCharacter, amount: Double) throws {
         guard healer == target else { throw RPGException.canOnlyHealSelf }
-        return target.receiveHealing(amount)
+        target.receiveHealing(amount)
     }
 }

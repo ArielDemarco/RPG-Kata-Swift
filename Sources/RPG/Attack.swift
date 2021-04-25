@@ -11,14 +11,14 @@ struct Attack {
     func execute(attacker: RPGCharacter,
                  opponent: RPGCharacter,
                  damage: Double,
-                 battlefield: Battlefield) throws -> RPGCharacter {
+                 battlefield: Battlefield) throws {
         guard attacker != opponent else { throw RPGException.cannotHurtSelf }
         guard battlefield.isInRange(attacker: attacker,
                                     opponent: opponent) else { throw RPGException.enemyNotInRange }
         let totalDamage = calculateDamage(fromAmount: damage,
                                           attackerLevel: attacker.level,
                                           opponentLevel: opponent.level)
-        return opponent.receiveDamage(of: totalDamage)
+        opponent.receiveDamage(of: totalDamage)
     }
     
     private func calculateDamage(fromAmount baseAmount: Double,

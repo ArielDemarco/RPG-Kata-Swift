@@ -35,26 +35,24 @@ class RPGCharacter: NSObject {
         self.maxRange = 0
     }
     
-    func receiveDamage(of damageAmount: Double) -> RPGCharacter {
+    func receiveDamage(of damageAmount: Double) {
         health -= damageAmount
-        return self
     }
     
     func attack(_ opponent: RPGCharacter,
                 damage: Double,
-                battlefield: Battlefield) throws -> RPGCharacter {
+                battlefield: Battlefield) throws {
         try attack.execute(attacker: self,
                            opponent: opponent,
                            damage: damage,
                            battlefield: battlefield)
     }
     
-    func receiveHealing(_ amount: Double) -> RPGCharacter {
+    func receiveHealing(_ amount: Double) {
         health += amount
-        return self
     }
     
-    func heal(_ amount: Double) throws -> RPGCharacter {
-        return try heal.execute(healer: self, target: self, amount: amount)
+    func heal(_ amount: Double) throws {
+        try heal.execute(healer: self, target: self, amount: amount)
     }
 }

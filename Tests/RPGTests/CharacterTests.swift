@@ -54,10 +54,8 @@ extension CharacterTests {
         let battleField = Battlefield()
         battleField.add(attacker, atPosition: 0)
         battleField.add(opponent, atPosition: 0)
-        let damagedOponent = try attacker.attack(opponent,
-                                                 damage: 100,
-                                                 battlefield: battleField)
-        XCTAssertEqual(damagedOponent.health, 900)
+        try attacker.attack(opponent, damage: 100, battlefield: battleField)
+        XCTAssertEqual(opponent.health, 900)
     }
     
     func testCharacter_receivesHealing_addsHealingAmountToActualHealth() throws {
@@ -80,9 +78,9 @@ extension CharacterTests {
     }
     
     func testCharacter_canOnlyHealsHimself() throws {
-        let damagedCharacer = RPGCharacter(health: 300)
-        let healedCharacter = try damagedCharacer.heal(600)
-        XCTAssertEqual(healedCharacter.health, 900)
+        let damagedCharacter = RPGCharacter(health: 300)
+        try damagedCharacter.heal(600)
+        XCTAssertEqual(damagedCharacter.health, 900)
     }
     
     func testCharacter_onAttackCharacter5levelsAbove_opponentReceivesHalfDamage() throws {
@@ -91,8 +89,8 @@ extension CharacterTests {
         let battleField = Battlefield()
         battleField.add(attacker, atPosition: 0)
         battleField.add(opponent, atPosition: 0)
-        let attackedOpponent = try attacker.attack(opponent, damage: 1000, battlefield: battleField)
-        XCTAssertEqual(attackedOpponent.health, 500)
+        try attacker.attack(opponent, damage: 1000, battlefield: battleField)
+        XCTAssertEqual(opponent.health, 500)
     }
     
     func testCharacter_onAttackCharacter5levelsBelow_opponentReceives50PercentMoreDamage() throws {
@@ -101,8 +99,8 @@ extension CharacterTests {
         let battlefield = Battlefield()
         battlefield.add(attacker, atPosition: 0)
         battlefield.add(opponent, atPosition: 0)
-        let attackedOpponent = try attacker.attack(opponent, damage: 200, battlefield: battlefield)
-        XCTAssertEqual(attackedOpponent.health, 700)
+        try attacker.attack(opponent, damage: 200, battlefield: battlefield)
+        XCTAssertEqual(opponent.health, 700)
     }
 }
 
@@ -138,11 +136,11 @@ private extension CharacterTests {
     }
     
     func whenCharacterReceivesDamage(amount: Double) {
-        aCharacter = aCharacter.receiveDamage(of: amount)
+        aCharacter.receiveDamage(of: amount)
     }
     
     func whenCharacterIsHealed(by amount: Double) throws {
-        aCharacter = try aCharacter.heal(amount)
+        try aCharacter.heal(amount)
     }
     
     func thenCharacterHealthIs(_ value: Double) throws {
