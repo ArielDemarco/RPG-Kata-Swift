@@ -51,9 +51,7 @@ extension CharacterTests {
     func testCharacter_dealsDamage() throws {
         let attacker = RPGCharacter()
         let opponent = RPGCharacter(health: 1000)
-        let battleField = Battlefield()
-        battleField.add(attacker, atPosition: 0)
-        battleField.add(opponent, atPosition: 0)
+        let battleField = BattlefieldMother.withCharacters([attacker, opponent])
         try attacker.attack(opponent, damage: 100, battlefield: battleField)
         XCTAssertEqual(opponent.health, 900)
     }
@@ -86,19 +84,15 @@ extension CharacterTests {
     func testCharacter_onAttackCharacter5levelsAbove_opponentReceivesHalfDamage() throws {
         let attacker = RPGCharacter(level: 2)
         let opponent = RPGCharacter(health: 1000, level: 7)
-        let battleField = Battlefield()
-        battleField.add(attacker, atPosition: 0)
-        battleField.add(opponent, atPosition: 0)
-        try attacker.attack(opponent, damage: 1000, battlefield: battleField)
+        let battlefield = BattlefieldMother.withCharacters([attacker, opponent])
+        try attacker.attack(opponent, damage: 1000, battlefield: battlefield)
         XCTAssertEqual(opponent.health, 500)
     }
     
     func testCharacter_onAttackCharacter5levelsBelow_opponentReceives50PercentMoreDamage() throws {
         let attacker = RPGCharacter(level: 7)
         let opponent = RPGCharacter(health: 1000, level: 2)
-        let battlefield = Battlefield()
-        battlefield.add(attacker, atPosition: 0)
-        battlefield.add(opponent, atPosition: 0)
+        let battlefield = BattlefieldMother.withCharacters([attacker, opponent])
         try attacker.attack(opponent, damage: 200, battlefield: battlefield)
         XCTAssertEqual(opponent.health, 700)
     }
@@ -123,9 +117,7 @@ extension CharacterTests {
     func testCharacterFarAwayFromOpponent_onAttack_Misses() throws {
         let attacker = MeleeCharacter()
         let opponent = MeleeCharacter(health: 1000)
-        let battlefield = Battlefield()
-        battlefield.add(attacker, atPosition: 2)
-        battlefield.add(opponent, atPosition: 5)
+        let battlefield = BattlefieldMother.withCharacters([attacker, opponent], distance: Int.random(in: 3...10))
         XCTAssertThrowsError(try attacker.attack(opponent, damage: 200, battlefield: battlefield))
     }
 }
@@ -137,44 +129,30 @@ extension CharacterTests {
     }
     
     func testCharacter_joinFaction_addsFactionToCharactersFactions() {
-        let aFaction = randomFaction()
-        aCharacter.addFaction(aFaction)
-        XCTAssertTrue(aCharacter.factions.contains(aFaction))
+        aCharacter = CharacterMother.ofFaction("alliance")
+        XCTAssertTrue(aCharacter.factions.contains("alliance"))
     }
     
     func testCharacterInFaction_leaveFaction_removesTheFactionFromCharactersFaction() {
-        let aFaction = randomFaction()
-        aCharacter.addFaction(aFaction)
-        XCTAssertTrue(aCharacter.factions.contains(aFaction))
-        aCharacter.leaveFaction(aFaction)
-        XCTAssertFalse(aCharacter.factions.contains(aFaction))
+        aCharacter = CharacterMother.ofFaction("alliance")
+        XCTAssertTrue(aCharacter.factions.contains("alliance"))
+        aCharacter.leaveFaction("alliance")
+        XCTAssertFalse(aCharacter.factions.contains("alliance"))
     }
     
     func testCharacter_onAttackAlly_attackCantBeDone() {
-        let aFaction = randomFaction()
-        let attacker = RPGCharacter()
-        let opponent = RPGCharacter()
-        attacker.addFaction(aFaction)
-        opponent.addFaction(aFaction)
-        let battlefield = Battlefield()
-        battlefield.add(attacker, atPosition: 0)
-        battlefield.add(opponent, atPosition: 0)
+        let attacker = CharacterMother.ofFaction("someFaction")
+        let opponent = CharacterMother.ofFaction("someFaction")
+        let battlefield = BattlefieldMother.withCharacters([attacker, opponent])
         XCTAssertThrowsError((try attacker.attack(opponent,
                             damage: .random(in: 0...1000),
                             battlefield: battlefield)))
     }
     
     func testCharacter_canOnlyHealAllies() throws {
-        let aFaction = randomFaction()
-        let character = RPGCharacter()
-        let ally = RPGCharacter(health: 900)
-        let opponent = RPGCharacter()
-        character.addFaction(aFaction)
-        ally.addFaction(aFaction)
-        let battlefield = Battlefield()
-        battlefield.add(character, atPosition: 0)
-        battlefield.add(opponent, atPosition: 0)
-        battlefield.add(ally, atPosition: 0)
+        let character = CharacterMother.ofFaction("alliance")
+        let ally = CharacterMother.ofFaction("alliance", health: 900)
+        let opponent = CharacterMother.ofFaction("horde")
         try character.heal(ally, amount: 100)
         XCTAssertEqual(ally.health, 1000)
         XCTAssertThrowsError(try character.heal(opponent, amount: 100))
