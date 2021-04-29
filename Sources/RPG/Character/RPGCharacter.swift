@@ -19,15 +19,10 @@ class RPGCharacter: BattlefieldElement, NonNeutralElement {
         self.factions = []
         super.init(health: health, level: level)
     }
-    
-    func addFaction(_ faction: Faction) {
-        factions.insert(faction)
-    }
-    
-    func leaveFaction(_ faction: Faction) {
-        factions.remove(faction)
-    }
-    
+}
+
+// MARK: - Interaction related methods
+extension RPGCharacter {
     func attack(_ opponent: BattlefieldElement,
                 damage: Double,
                 battlefield: Battlefield) throws {
@@ -48,8 +43,19 @@ class RPGCharacter: BattlefieldElement, NonNeutralElement {
     func heal(_ character: RPGCharacter, amount: Double) throws {
         try heal.execute(healer: self, target: character, amount: amount)
     }
+}
+
+// MARK: - Faction Related Methods
+extension RPGCharacter {
+    func addFaction(_ faction: Faction) {
+        factions.insert(faction)
+    }
+    
+    func leaveFaction(_ faction: Faction) {
+        factions.remove(faction)
+    }
     
     func isAlly(of character: NonNeutralElement) -> Bool {
-        return factions.first(where: { character.factions.contains($0) }) != nil 
+        return factions.first(where: { character.factions.contains($0) }) != nil
     }
 }
