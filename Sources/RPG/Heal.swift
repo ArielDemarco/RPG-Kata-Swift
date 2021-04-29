@@ -9,7 +9,9 @@ import Foundation
 
 struct Heal {
     func execute(healer: RPGCharacter, target: RPGCharacter, amount: Double) throws {
-        guard healer == target || healer.isAlly(of: target) else { throw RPGException.canOnlyHealOrAllySelf }
+        guard healer == target || healer.isAlly(of: target) else {
+            throw RPGException.canOnlyHealOrAllySelf
+        }
         target.receiveHealing(amount)
     }
 }

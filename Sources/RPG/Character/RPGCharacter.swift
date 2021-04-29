@@ -9,22 +9,24 @@ import Foundation
 
 typealias Faction = String
 
-class RPGCharacter: NSObject {
+protocol NonNeutralElement {
+    var factions: Set<Faction> { get }
+}
+
+class BattlefieldElement: NSObject {
     struct Constants {
         static let initialHealth: Double = 1000
         static let maximumHealth: Double = 1000
         static let initialLevel: Int = 1
     }
-    private let attack: Attack
-    private let heal: Heal
-    private(set) var factions: Set<Faction>
-    private(set) var level: Int
-    private(set) var health: Double {
+    open var maxRange: Int
+    var level: Int
+    var health: Double {
         didSet {
             health = max(0, min(health, Constants.maximumHealth))
         }
     }
-    open var maxRange: Int
+    
     var isAlive: Bool {
         health > 0
     }
@@ -33,10 +35,26 @@ class RPGCharacter: NSObject {
          level: Int = Constants.initialLevel) {
         self.health = health
         self.level = level
+
+        self.maxRange = 0
+    }
+    
+    func receiveDamage(of damageAmount: Double) {
+        health -= damageAmount
+    }
+}
+
+class RPGCharacter: BattlefieldElement, NonNeutralElement {
+    private let attack: Attack
+    private let heal: Heal
+    var factions: Set<Faction>
+    
+    override init(health: Double = Constants.initialHealth,
+         level: Int = Constants.initialLevel) {
         self.attack = Attack()
         self.heal = Heal()
-        self.maxRange = 0
         self.factions = []
+        super.init(health: health, level: level)
     }
     
     func addFaction(_ faction: Faction) {
@@ -47,13 +65,13 @@ class RPGCharacter: NSObject {
         factions.remove(faction)
     }
     
-    func receiveDamage(of damageAmount: Double) {
-        health -= damageAmount
-    }
-    
-    func attack(_ opponent: RPGCharacter,
+    func attack(_ opponent: BattlefieldElement,
                 damage: Double,
                 battlefield: Battlefield) throws {
+        if let nonNeutralElement = opponent as? NonNeutralElement,
+           isAlly(of: nonNeutralElement) {
+            throw RPGException.cannotHurtAlly
+        }
         try attack.execute(attacker: self,
                            opponent: opponent,
                            damage: damage,
@@ -68,7 +86,7 @@ class RPGCharacter: NSObject {
         try heal.execute(healer: self, target: character, amount: amount)
     }
     
-    func isAlly(of character: RPGCharacter) -> Bool {
+    func isAlly(of character: NonNeutralElement) -> Bool {
         return factions.first(where: { character.factions.contains($0) }) != nil 
     }
 }

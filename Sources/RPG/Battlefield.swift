@@ -8,17 +8,17 @@
 import Foundation
 
 class Battlefield {
-    private var charactersPosition: [RPGCharacter: Int]
+    private var charactersPosition: [BattlefieldElement: Int]
     
-    init(charactersPosition: [RPGCharacter: Int] = [:]) {
+    init(charactersPosition: [BattlefieldElement: Int] = [:]) {
         self.charactersPosition = charactersPosition
     }
     
-    func add(_ character: RPGCharacter, atPosition position: Int) {
+    func add(_ character: BattlefieldElement, atPosition position: Int) {
         charactersPosition[character] = position
     }
     
-    func isInRange(attacker: RPGCharacter, opponent: RPGCharacter) -> Bool {
+    func isInRange(attacker: BattlefieldElement, opponent: BattlefieldElement) -> Bool {
         guard let attackerPosition = charactersPosition[attacker],
               let opponentPosition = charactersPosition[opponent] else { return false }
         return abs(attackerPosition - opponentPosition) <= attacker.maxRange
