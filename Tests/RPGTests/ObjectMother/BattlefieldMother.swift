@@ -8,10 +8,10 @@
 @testable import RPG
 
 struct BattlefieldMother {
-    static func withCharacters(_ characters: [RPGCharacter], distance: Int = 0) -> Battlefield {
+    static func withElements(_ elements: [BattlefieldElement], distance: Int = 0) -> Battlefield {
         let battlefield = Battlefield()
         var position = 0
-        characters.forEach({
+        elements.forEach({
             battlefield.add($0, atPosition: position)
             position += distance
         })

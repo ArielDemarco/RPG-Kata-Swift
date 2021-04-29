@@ -8,22 +8,16 @@
 @testable import RPG
 
 struct CharacterMother {
-    func meleeCharacter() -> MeleeCharacter {
+    static func melee() -> MeleeCharacter {
         return MeleeCharacter()
     }
     
-    func rangedCharacter() -> RangedCharacter {
+    static func ranged() -> RangedCharacter {
         return RangedCharacter()
     }
     
-    static func character(health: Double = 1000,
-                          level: Int = 1,
-                          faction: Faction? = nil) -> RPGCharacter {
-        let character = RPGCharacter(health: health, level: level)
-        if let faction = faction {
-            character.addFaction(faction)
-        }
-        return character
+    static func `default`() -> RPGCharacter {
+        return RPGCharacter()
     }
     
     static func ofFaction(_ faction: Faction, health: Double = 1000) -> RPGCharacter {
